@@ -281,3 +281,12 @@ databases, `.env` files, tokens, cookies, or personal capture data.
 
 No license file is currently present. A license decision is required before
 public distribution; this project should not be assumed to be MIT-licensed.
+
+<img width="1890" height="912" alt="image" src="https://github.com/user-attachments/assets/3a15440c-c668-4616-8876-0c1275699201" />
+<img width="1902" height="905" alt="image" src="https://github.com/user-attachments/assets/eeb6a9f5-52dc-4706-b679-dd3459cfa3ea" />
+<img width="1892" height="905" alt="image" src="https://github.com/user-attachments/assets/5b323d78-6494-4c32-a178-e1c81464fffe" />
+<img width="1899" height="908" alt="image" src="https://github.com/user-attachments/assets/51408da6-37a6-4261-b074-c2e036308af8" />
+<img width="1900" height="911" alt="image" src="https://github.com/user-attachments/assets/063d650a-40f2-473c-b06e-011bec9bf553" />
+<img width="1896" height="908" alt="image" src="https://github.com/user-attachments/assets/5345dff0-c731-419e-bdda-f4eb116484b1" />
+
+
