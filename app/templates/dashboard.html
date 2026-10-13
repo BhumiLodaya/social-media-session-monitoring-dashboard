@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Session Dashboard</title><link rel="stylesheet" href="/static/dashboard.css?v=dashboard-ui-2">
+</head>
+<body>
+<main>
+  <header class="site-header"><div><p class="eyebrow">SOCIAL MEDIA MONITORING</p><h1>Session Dashboard</h1></div><nav aria-label="Primary navigation"><a href="/demo">Open local demo</a> <button id="logout" type="button">Log out</button></nav></header>
+  <p class="demo notice">Local synthetic demo data only. No third-party cookies or tokens are collected.</p>
+  <section id="login" class="auth-panel"><p class="eyebrow">SECURE ACCESS</p><h2>Sign in</h2><p class="muted">Review consented activity and monitoring metadata for your account.</p><p id="startup-error" class="error" role="alert"></p><form id="login-form">
+    <label>Username<input name="username" autocomplete="username" placeholder="Username" required></label><label>Password<input name="password" type="password" autocomplete="current-password" placeholder="Password" required></label>
+    <button type="submit">Sign in</button><p id="login-error" class="error" role="alert"></p>
+  </form></section>
+  <section id="dashboard" hidden>
+    <section class="overview"><div class="section-heading"><div><p class="eyebrow">OVERVIEW</p><h2>Session activity</h2></div><button id="refresh" type="button" class="button-secondary">Refresh data</button></div><div class="cards metric-grid"><div><span>Total sessions</span><b id="total">0</b></div><div><span>Active</span><b id="active" class="active">0</b></div><div><span>Expired</span><b id="expired" class="expired">0</b></div><div><span>Revoked</span><b id="revoked" class="revoked">0</b></div></div></section>
+    <section class="panel"><div class="toolbar"><label>Status<select id="status"><option value="">All statuses</option><option>active</option><option>expired</option><option>revoked</option></select></label><label>Event type<select id="event-type"><option value="">All session events</option><option>created</option><option>revoked</option><option>expired</option></select></label></div>
+    <p id="message"></p><table><thead><tr><th>ID</th><th>Status</th><th>Created</th><th>Last activity</th><th>Expiry</th><th></th></tr></thead><tbody id="rows"></tbody></table>
+    </section>
+    <section class="panel" id="session-inventory-panel">
+      <h2>Session inventory</h2>
+      <p class="muted">Inventory records are separate from dashboard login sessions. “Authentication unverified” means this application has not confirmed a platform login; a running browser process is not proof of authentication.</p>
+      <div class="cards"><div>Recorded sessions <b id="inventory-total">0</b></div><div>Active <b id="inventory-active">0</b></div><div>Unknown <b id="inventory-unknown">0</b></div><div>Revoked <b id="inventory-revoked">0</b></div></div>
+      <p id="session-inventory-status" class="muted" role="status">Loading session inventory...</p>
+      <table><thead><tr><th>ID</th><th>User</th><th>Platform</th><th>Type</th><th>Status</th><th>Authentication</th><th>Created</th><th>Last activity</th><th>Expiry</th><th>Last check</th><th>Status reason</th><th></th></tr></thead><tbody id="session-inventory-rows"></tbody></table>
+    </section>
+    <h2>Recent events</h2><ul id="events"></ul>
+    <section class="panel" id="browser-activity-panel">
+      <h2>Browser Activity</h2>
+      <p class="muted">Consent-based browser extension metadata only. Full URLs, page contents, cookies, and tokens are not displayed.</p>
+      <p id="browser-activity-status" class="muted" role="status">Loading browser activity...</p>
+      <table>
+        <thead><tr><th>Domain</th><th>Event type</th><th>Timestamp</th><th>Duration</th><th>Source</th></tr></thead>
+        <tbody id="browser-activity-rows"></tbody>
+      </table>
+    </section>
+    <section class="panel" id="social-browser-activity-panel">
+      <h2>Recent Facebook/Instagram Browser Activity</h2>
+      <p class="muted">Observed browser activity does not prove that a Facebook or Instagram account is authenticated.</p>
+      <p id="social-browser-activity-status" class="muted" role="status">Loading Facebook and Instagram activity...</p>
+      <table>
+        <thead><tr><th>Domain</th><th>Event type</th><th>Timestamp</th><th>Duration</th><th>Consent version</th></tr></thead>
+        <tbody id="social-browser-activity-rows"></tbody>
+      </table>
+    </section>
+    <section class="panel status-panel" id="social-browser-status-panel">
+      <div class="section-heading"><div><p class="eyebrow">CONSENTED ACTIVITY</p><h2>Facebook and Instagram status</h2></div><span class="status-legend">Monitoring metadata only</span></div>
+      <p class="muted">This status reflects recent consented browser activity only. It does not indicate whether an account is authenticated.</p>
+      <p id="social-browser-status-message" class="muted" role="status">Loading Facebook and Instagram status...</p>
+      <table>
+        <thead><tr><th>Platform</th><th>Browser activity status</th><th>Last activity</th><th>Explanation</th></tr></thead>
+        <tbody id="social-browser-status-rows"></tbody>
+      </table>
+    </section>
+    <section class="panel" id="browser-extension-monitoring-panel">
+      <h2>Browser Extension Monitoring</h2>
+      <p class="muted">Pairing and browser activity are separate from official Instagram account authorization. A navigation event does not prove an Instagram login or identify an account.</p>
+      <p id="browser-extension-status" class="muted" role="status">Loading browser extension status...</p>
+      <p id="browser-extension-message" role="status"></p>
+      <table>
+        <thead><tr><th>Installation</th><th>Status</th><th>Last seen</th><th>Expires</th><th></th></tr></thead>
+        <tbody id="browser-extension-rows"></tbody>
+      </table>
+      <p id="browser-extension-consent" class="muted"></p>
+    </section>
+    <section class="panel"><h2>Network observations</h2><p class="muted">Encrypted traffic is metadata only; it is not a confirmed application event.</p><div class="toolbar"><select id="network-protocol"><option value="">All protocols</option></select><select id="network-source"><option value="">All sources</option><option>imported</option><option>live-captured</option></select></div><div class="cards"><div>Observations <b id="observation-total">0</b></div><div>Protocols <b id="protocol-total">0</b></div></div><ul id="protocols"></ul><p id="observation-status" class="muted"></p><table><thead><tr><th>UTC time</th><th>Protocol</th><th>Source</th><th>Destination</th><th>Packets/bytes</th></tr></thead><tbody id="observation-rows"></tbody></table></section>
+    <section class="panel"><h2>Authorized connections</h2><ul id="connections"></ul><h2>Cookie consent</h2><ul id="consent"></ul></section>
+  </section>
+</main><script src="/static/dashboard.js?v=browser-activity-1"></script>
+</body></html>

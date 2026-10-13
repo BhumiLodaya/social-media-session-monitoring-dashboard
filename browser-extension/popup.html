@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Activity Monitor</title>
+  <style>
+    body { width: 320px; margin: 0; padding: 16px; font: 14px system-ui, sans-serif; color: #1f2937; }
+    h1 { font-size: 17px; margin: 0 0 10px; }
+    label { display: block; margin-top: 10px; font-weight: 600; }
+    input { box-sizing: border-box; width: 100%; margin-top: 4px; padding: 7px; }
+    button { margin: 8px 4px 0 0; padding: 7px 10px; }
+    #status { margin: 10px 0; font-weight: 600; }
+    .notice { font-size: 12px; line-height: 1.4; color: #4b5563; }
+    .error { color: #b91c1c; }
+  </style>
+</head>
+<body>
+  <h1>Social Media Activity Monitor</h1>
+  <div id="status">Loading…</div>
+  <p class="notice">Only supported domain names, navigation, tab activation, and estimated active-tab duration are collected. No page contents, full URLs, cookies, passwords, or tokens are collected. This does not detect successful logins or identify an account.</p>
+
+  <label for="backend-url">Backend URL</label>
+  <input id="backend-url" type="url" value="http://127.0.0.1:8000" autocomplete="off">
+  <button id="save-url">Save backend URL</button>
+
+  <label for="pairing-code">Pairing code</label>
+  <input id="pairing-code" type="text" autocomplete="off" spellcheck="false">
+  <label for="installation-label">Installation label</label>
+  <input id="installation-label" type="text" value="Chrome extension" maxlength="100">
+  <button id="pair">Pair extension</button>
+
+  <div>
+    <button id="toggle" disabled>Enable monitoring</button>
+    <button id="disconnect">Disconnect</button>
+  </div>
+  <div id="message" class="notice"></div>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "name": "social-media-activity-monitor-extension",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/domain_utils.test.js"
+  }
+}

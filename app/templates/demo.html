@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Local browser session demo</title><link rel="stylesheet" href="/static/demo.css"></head>
+<body><main>
+  <h1>Local browser-session demo</h1>
+  <p>This page uses synthetic account <code>demo-alice</code> and only talks to this local FastAPI app.</p>
+  <p>No third-party sites, credentials, cookies, or anti-bot controls are involved.</p>
+  <button id="start">Start synthetic demo</button>
+  <section id="controls" hidden>
+    <p id="message"></p>
+    <button id="create">Create 30-second browser session</button>
+    <button id="expire">Expire last session now</button>
+    <button id="revoke">Revoke last session</button>
+    <a href="/">View dashboard</a>
+  </section>
+  <pre id="output"></pre>
+</main><script src="/static/demo.js"></script></body></html>

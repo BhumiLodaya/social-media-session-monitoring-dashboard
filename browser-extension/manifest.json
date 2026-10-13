@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Social Media Activity Monitor",
+  "version": "1.0.0",
+  "description": "Consent-based monitoring of supported social-media domain activity.",
+  "permissions": [
+    "storage",
+    "tabs",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:8000/*",
+    "*://*.facebook.com/*",
+    "*://*.instagram.com/*",
+    "*://*.linkedin.com/*",
+    "*://*.tiktok.com/*",
+    "*://*.x.com/*",
+    "*://*.youtube.com/*"
+  ],
+  "background": {
+    "service_worker": "service_worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Social Media Activity Monitor",
+    "default_popup": "popup.html"
+  }
+}

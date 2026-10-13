@@ -1,0 +1,26 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: sqlite:////app/data/app.db
+      SESSION_COOKIE_SECURE: "false"
+      NETWORK_CAPTURE_ENABLED: "false"
+      NETWORK_CAPTURE_INTERFACE: ""
+      TSHARK_EXECUTABLE: ""
+    volumes:
+      - app-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  app-data:
