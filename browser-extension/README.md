@@ -26,22 +26,29 @@ It does **not** collect full URLs, paths, query strings, fragments, page content
 
 ## Pair and give consent
 
-1. Log in to the existing dashboard.
-2. Use the authenticated pairing API to create a short-lived pairing code:
-   `POST http://127.0.0.1:8000/browser-extension/pairing/start`
-3. Copy the returned `pairing_code` into the extension popup. The code is single-use and expires quickly.
-4. Choose an installation label and select **Pair extension**.
-5. Monitoring is still paused after pairing. Select **Enable monitoring** only after reviewing the collection notice.
-6. Visit a supported website in a tab. The extension sends sanitized metadata to `POST /browser-activity/events`.
+1. Log in to the dashboard at `http://127.0.0.1:8000`.
+2. Open `http://127.0.0.1:8000/docs`, expand `POST
+   /browser-extension/pairing/start`, choose **Try it out**, then **Execute**.
+   The login session authorizes the request. Copy the returned short-lived
+   `pairing_code`.
+3. Open the extension popup, paste the code, choose an installation label, and
+   select **Pair extension**. The code is single-use and expires quickly.
+4. Pairing alone does not enable collection. Review the popup's collection
+   notice, then explicitly select **Enable monitoring**.
+5. Visit a supported website in a tab. The extension sends sanitized metadata
+   to `POST /browser-activity/events`.
 
 The bearer token is stored in `chrome.storage.local` and is never put in a URL or logged. The dashboard session cookie is not used by event ingestion.
 
 ## Pause or disconnect
 
-- **Pause monitoring** stops collection and sending while retaining the pairing locally.
+- **Pause monitoring** closes the current active-tab duration and stops
+  collection/sending while retaining the pairing locally. Paused time is not
+  included when monitoring resumes.
 - **Disconnect** stops monitoring and clears the locally stored bearer token.
-- Disconnect does not revoke the server-side device. Revoke it from the authenticated backend endpoint:
-  `POST /browser-extension/devices/{device_id}/revoke`
+- **Revoke device** on the dashboard's **Monitoring** page revokes the
+  server-side device. Disconnect alone does not revoke it. The equivalent
+  authenticated endpoint is `POST /browser-extension/devices/{device_id}/revoke`.
 
 If the code is expired/invalid, the device is revoked, or the backend is unavailable, the popup shows a status/error and the extension does not retry indefinitely.
 

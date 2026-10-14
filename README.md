@@ -1,292 +1,135 @@
 # Social Media Session Monitoring Dashboard
 
-A local FastAPI dashboard for reviewing authenticated application sessions,
-consented browser-extension activity, session inventory, and network metadata.
-It is designed for authorized, local monitoring and synthetic demonstrations.
-It is **not** an official Facebook or Instagram integration and does not
-verify whether a social-media account is logged in.
+This is a local FastAPI dashboard I built to keep track of accounts and sessions in the application, and to review limited browser activity when a person chooses to pair and enable the Chrome extension. It also includes a post-reach comparison view. The browser records show activity on supported domains; they do not establish that someone signed in to a social-media account.
 
-## Features
+## What it does
 
-- Protected dashboard authentication with Argon2 password hashes and
-  HttpOnly SameSite session cookies.
-- Responsive light-theme dashboard built with HTML, CSS, and vanilla
-  JavaScript.
-- Chrome Manifest V3 extension pairing, consent, pause/disconnect, device
-  expiry, revocation, and sanitized activity ingestion.
-- Separate Facebook and Instagram browser-activity status:
-  `recently_active`, `inactive`, or `unknown`.
-- Session inventory records with refresh and revoke actions. Inventory
-  authentication remains `unverified` unless a supported verification method
-  exists.
-- Clearly labelled synthetic demo sessions and mock provider connections.
-- Network CSV/JSON metadata import, protocol statistics, optional authorized
-  host-based TShark capture, deduplication, and default IP redaction.
-- SQLite persistence through SQLAlchemy and additive, idempotent migrations.
-- Docker Compose deployment with a persistent named volume and Docker-safe
-  live-capture defaults.
-- Pytest coverage for API behavior and Node syntax checks for dashboard
-  JavaScript.
+- Lets people register, sign in, and sign out of this application. Passwords are stored as Argon2 hashes rather than plain text.
+- Records application login/logout events (including login success or failure where available) with an account label, event type, source, confidence, and timestamp. Sessions include creation, last-activity, expiry, and revocation timestamps; account details derive last-login and last-logout times from the activity records.
+- Provides an administrator-only user directory, account details and activity history, and account activation controls.
+- Shows the signed-in user's Login Activity and session information, with filters for the available activity fields.
+- Supports optional, consent-based browser activity tracking through a Chrome Manifest V3 extension. Stored events include a supported domain, event type, occurrence/recording timestamps, optional duration, consent version, and limited metadata.
+- Includes session inventory and network-observation views. Network capture is off by default.
+- Compares a post's reach with a baseline from earlier posts for the same connected account.
 
-Recent browser activity can show that the extension observed navigation or tab
-activity. It does not prove account authentication, identify an account, or
-confirm a valid third-party session. Synthetic records are not real social
-media data.
+## Browser activity is not a login record
 
-## Architecture
+The extension observes browser navigation and tab activity on supported domains. A visit, tab switch, or time spent on a domain does **not** prove that a person logged in or out of Facebook, Instagram, or another site. The application can confirm its own login and logout events; it does not reliably observe authentication events on third-party websites.
 
-```mermaid
-flowchart LR
-  D[Dashboard: HTML/CSS/vanilla JS] -->|HTTP + session cookie| A[FastAPI]
-  E[Chrome MV3 extension] -->|Bearer token + consented metadata| A
-  A --> S[SQLAlchemy services]
-  S --> DB[(SQLite)]
-  A --> T[TShark host capture or import parser]
-  T --> DB
-```
+The extension is opt-in: it must be paired with the dashboard and monitoring must be enabled in its popup. It reports a normalized domain and limited event metadata, not full URLs or page contents. It does not read passwords, form contents, cookies, access tokens, or browser session credentials. See [browser-extension/README.md](browser-extension/README.md) for pairing and revocation steps.
 
-- `app/main.py` creates the FastAPI application, mounts static files, serves
-  templates, and registers routers.
-- Routers handle authentication, dashboard sessions, browser activity,
-  session inventory, and monitoring.
-- SQLAlchemy models persist users, sessions, extension devices, activity,
-  inventory records, network observations, providers, and consent events.
-- The extension is deliberately separate from the Docker image and runs in
-  the host browser.
+## Post-reach diagnosis and data source
 
-## Project structure
+The diagnosis view uses metrics stored by this application. For a diagnosis, it takes the latest post record as the post being assessed, excludes that record from the historical baseline, filters historical reach outliers using the 1.5-IQR rule, and compares the latest reach with the median of the remaining comparable posts when that latest post has reach data. It needs at least two comparable historical posts to produce a baseline. If there is not enough data, the response reports that limitation instead of presenting a made-up comparison.
 
-```text
-app/
-  main.py
-  config.py
-  database.py
-  models/             SQLAlchemy models
-  routers/            FastAPI endpoints
-  schemas/            Pydantic request/response models
-  services/           authentication, activity, import, provider, TShark logic
-  templates/          dashboard and demo HTML
-  static/             dashboard and demo CSS/JavaScript
-browser-extension/   Chrome Manifest V3 extension and tests
-scripts/              optional local synthetic browser driver
-tests/                isolated SQLite pytest suite
-Dockerfile
-docker-compose.yml
-.env.example
-requirements.txt
-README.md
-```
+The project does **not** currently retrieve live Facebook or Instagram post metrics end to end. The social connection flow is a demo/placeholder flow, and the included sample metrics are synthetic and marked as demo data. A configured app ID or a browser visit is not evidence of an authorized provider connection. The diagnosis logic works with the application's expected metric records, but live provider data has not been verified.
 
-## Requirements
+## Technology
 
-### Required for local development
+- Python, FastAPI, Pydantic Settings, SQLAlchemy, and SQLite
+- HTML, CSS, and vanilla JavaScript for the dashboard
+- Chrome Manifest V3 APIs for the optional extension
+- Pytest for the Python suite and Node's built-in test runner for extension tests
+- Docker Compose for containerized local startup
 
-- Windows PowerShell
-- Python 3.12
-- Dependencies from `requirements.txt`
+## Run locally on Windows
 
-### Optional
-
-- Docker Desktop with the WSL 2 Linux engine
-- Node.js for `node --check`
-- Wireshark/TShark and Npcap for authorized host-based capture only
-- Playwright and Chromium for the optional synthetic browser driver
-
-## Local setup
+Use PowerShell from the project root. Python 3.12 is the version used by the Docker image.
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-Copy-Item .env.example .env
-uvicorn app.main:app --reload
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-If `.env` already exists, preserve it and edit only the settings you intend
-to change. Never commit `.env`. Open:
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The API's interactive documentation is at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs). The default SQLite database is `data/app.db`; the application initializes its schema at startup. Keep that file if you need to retain local data.
 
-- Dashboard: <http://127.0.0.1:8000/>
-- API documentation: <http://127.0.0.1:8000/docs>
-- Readiness check: <http://127.0.0.1:8000/health>
+### Configuration and first administrator
 
-The `/demo` page starts a local synthetic account and creates only local
-records. It does not visit or collect data from third-party services.
+The application reads settings from environment variables and, when present, `.env`. Start with `.env.example`; do not commit a `.env` file or database containing private data.
 
-## Docker
+`INITIAL_ADMIN_USERNAME` is an optional one-time bootstrap setting. Set it to the exact username of an already registered, active account before the first administrator bootstrap. It must match exactly one active account; it is not a way to grant admin privileges during public registration. Leave it unset when you do not need to bootstrap an administrator. The normal registration form does not accept a role.
 
-Docker Desktop must already be installed and running. Verify:
+Other settings in `.env.example` include the SQLite URL, session cookie and lifetime settings, observation retention, network-capture controls, and Meta OAuth demo settings. Network capture and Meta demo mode are configured off/on respectively by default; review the example file before changing them.
 
-```powershell
-docker version
-docker compose version
-wsl --status
-```
+## Chrome extension
 
-Build and start:
+To load the extension locally:
 
-```powershell
-docker compose build
-docker compose up -d
-docker compose ps
-docker compose logs --tail=100 app
-```
+1. Start the dashboard using the instructions above.
+2. In Chrome, open `chrome://extensions`, enable **Developer mode**, and select **Load unpacked**.
+3. Choose the repository's `browser-extension` folder.
+4. Sign in to the dashboard, then start pairing from the dashboard's Monitoring view (or the documented pairing endpoint).
+5. Enter the short-lived pairing code in the extension popup. Pairing alone does not start collection; explicitly enable monitoring in the popup.
+6. Check browser activity in the dashboard's Monitoring and Login Activity views.
+7. To stop collection, pause or disconnect in the popup. To invalidate the device at the server, use **Revoke device** in the dashboard. Disconnecting locally is not the same as server-side revocation.
 
-The service publishes port `8000`, runs Uvicorn without reload as a non-root
-user, and checks `/health`. The SQLite database is stored in the named
-`app-data` volume mounted at `/app/data`.
+The extension's supported domains, permissions, event fields, consent behavior, and errors are described in [browser-extension/README.md](browser-extension/README.md).
 
-```powershell
-docker compose restart
-docker compose down
-docker compose up -d
-docker compose up -d --build
-```
+## Dashboard sections
 
-`docker compose down` preserves the named volume. Do **not** use
-`docker compose down -v` as routine cleanup. Back up the database before
-upgrades or manual maintenance.
-
-Docker Compose explicitly sets:
-
-```text
-NETWORK_CAPTURE_ENABLED=false
-NETWORK_CAPTURE_INTERFACE=
-TSHARK_EXECUTABLE=
-```
-
-Windows Npcap interface names and Windows executable paths do not work
-unchanged inside the Linux container. Network import, stored observations,
-statistics, and the dashboard remain available. Live capture remains
-host-dependent unless a separate Linux-compatible capture setup is actually
-configured and verified.
-
-## Browser extension
-
-The extension runs in Chrome on the host, not inside Docker.
-
-1. Start the backend at `http://127.0.0.1:8000`.
-2. Open `chrome://extensions`.
-3. Enable **Developer mode**.
-4. Choose **Load unpacked** and select `browser-extension`.
-5. Open the extension popup and confirm the backend URL.
-6. Sign in to the dashboard and create a short-lived pairing code with
-   `POST /browser-extension/pairing/start`.
-7. Enter the code and an installation label in the popup, then choose
-   **Pair extension**.
-8. Review the consent notice and choose **Enable monitoring**.
-9. Use **Pause monitoring** to stop collection while retaining pairing, or
-   **Disconnect** to clear the local bearer token.
-10. Revoke the server-side device from the dashboard when finished.
-
-When enabled, the extension sends normalized supported domains, event types,
-timestamps, consent version, duration estimates, and limited transition/tab
-metadata. It does not collect full URLs, page contents, cookies, passwords,
-form inputs, request contents, access tokens, or browser session credentials.
+- **Login Activity** — application authentication events and consented browser events, with browser events identified as observed activity rather than confirmed website authentication.
+- **Sessions** — the current user's application sessions and their active, expired, or revoked state.
+- **User Directory** — administrator-only listing, user details, account timestamps/activity, and activation controls.
+- **Monitoring** — paired extension devices, consent state, browser activity, and network observations when enabled.
+- **Social Accounts / Diagnosis** — demo connection and stored post metrics, plus the historical reach comparison described above.
 
 ## API overview
 
-Interactive documentation is available at `/docs`.
+The API is served by the same FastAPI application. See `/docs` for request and response schemas.
 
-### Authentication
+| Area | Routes |
+| --- | --- |
+| Authentication | `/auth/register`, `/auth/login`, `/auth/logout`, `/auth/me` |
+| Application sessions | `/sessions`, `/sessions/stats`, `/sessions/events`, `/sessions/{session_id}`, `/sessions/{session_id}/revoke` |
+| Session inventory | `/session-inventory` and its stats, refresh, and revoke routes |
+| Login Activity | `/login-activity/events`, `/login-activity/stats` |
+| Administrator user management | `/users`, `/users/{user_id}/details`, `/users/{user_id}/status` |
+| Browser extension and activity | `/browser-extension/pairing/start`, `/browser-extension/pairing/exchange`, `/browser-extension/devices`, `/browser-activity/*` |
+| Monitoring | `/monitoring/network`, `/monitoring/network/stats`, `/monitoring/consent`, `/monitoring/connections` |
+| Social data and diagnosis | `/social/connections`, `/social/analytics/demo`, `/social/analytics/posts`, `/social/analytics/diagnosis` |
 
-- `POST /auth/login` — create a dashboard session.
-- `GET /auth/me` — return the current user.
-- `POST /auth/logout` — revoke the current dashboard session.
+Protected routes use the application's authenticated session. User-directory and account-status management are restricted to administrators. Public registration does not grant an administrator role.
 
-### Dashboard sessions
+## Tests
 
-- `GET /sessions` and `GET /sessions/stats` — list and summarize application
-  sessions.
-- `GET /sessions/events` — list session events.
-- `POST /sessions/{id}/revoke` — revoke an application session.
-
-### Session inventory
-
-- `POST /session-inventory` — create a supported inventory record.
-- `GET /session-inventory` and `GET /session-inventory/stats` — list and
-  summarize records.
-- `POST /session-inventory/{id}/refresh` — refresh persisted inventory status.
-- `POST /session-inventory/{id}/revoke` — revoke an inventory record.
-
-### Browser extension and activity
-
-- `POST /browser-extension/pairing/start` — create an authenticated,
-  short-lived pairing code.
-- `POST /browser-extension/pairing/exchange` — exchange a code for a device
-  token.
-- `GET /browser-extension/devices` and
-  `POST /browser-extension/devices/{id}/revoke` — manage owned devices.
-- `POST /browser-activity/events` — ingest an event using the extension bearer
-  token.
-- `GET /browser-activity/events` and `GET /browser-activity/stats` — retrieve
-  current-user activity.
-- `GET /browser-activity/status` — calculate Facebook and Instagram activity
-  status using the configured inactivity threshold.
-
-### Network and monitoring
-
-- `POST /monitoring/network/import` — import sanitized CSV or JSON metadata.
-- `POST /monitoring/network/live` — request optional authorized host capture.
-- `GET /monitoring/network` and `GET /monitoring/network/stats` — retrieve
-  observations and protocol counts.
-- `POST /monitoring/network/retention` — delete observations older than the
-  configured retention period.
-- `GET/POST /monitoring/connections` and
-  `POST /monitoring/connections/{id}/sync` — use the included mock provider.
-- `GET/POST /monitoring/consent` — manage first-party consent records.
-
-## Testing
+From the project root, run the Python tests with the configured virtual environment:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest -q
-node --check app\static\dashboard.js
-node --test browser-extension\tests\domain_utils.test.js
+.\.venv\Scripts\python.exe -m pytest tests -q
 ```
 
-The Python tests use isolated in-memory SQLite databases. They cover
-authentication, ownership, migrations, browser pairing and ingestion,
-Facebook/Instagram filtering and status semantics, session inventory,
-network import/redaction/deduplication, provider mocks, and dashboard
-contracts. Tests do not contact social platforms or require real credentials.
+Run the extension tests from its directory (Node.js must be installed):
 
-## Security, privacy, and limitations
+```powershell
+Set-Location browser-extension
+npm test
+Set-Location ..
+```
 
-- Keep `.env`, SQLite databases, tokens, credentials, pairing codes, and logs
-  out of Git.
-- Passwords are hashed by the application; dashboard sessions use server-side
-  records and HttpOnly cookies.
-- Extension bearer tokens are stored server-side as hashes and are not placed
-  in URLs or logs.
-- Browser activity requires explicit extension consent and is isolated by
-  authenticated user.
-- Browser activity status is not account authentication and never changes
-  session-inventory authentication status.
-- The included provider adapter is mock-only. No official Meta OAuth/API
-  integration is implemented.
-- Network capture is metadata-only, redacts IP addresses by default, and
-  requires authorization, suitable permissions, and a compatible host setup.
-- Docker disables live packet capture by default.
-- Login throttling, production secret management, backups, TLS termination,
-  and operational monitoring require additional deployment work.
+## Docker
 
-## Contribution and issues
+With Docker Desktop running, build and start the application from the project root:
 
-For changes, preserve the existing API contracts, consent boundaries, and
-database data. Add focused tests for behavior changes and run the complete
-suite before opening a pull request. Bug reports should include the endpoint,
-reproduction steps, relevant status code, and sanitized logs; do not attach
-databases, `.env` files, tokens, cookies, or personal capture data.
+```powershell
+docker compose up --build
+```
 
-## License
+Docker Compose stores the SQLite database in the named `app-data` volume. Stop the application with `Ctrl+C`; `docker compose down` stops and removes the container, not the named data volume.
 
-No license file is currently present. A license decision is required before
-public distribution; this project should not be assumed to be MIT-licensed.
+## Screenshots
 
-<img width="1890" height="912" alt="image" src="https://github.com/user-attachments/assets/3a15440c-c668-4616-8876-0c1275699201" />
-<img width="1902" height="905" alt="image" src="https://github.com/user-attachments/assets/eeb6a9f5-52dc-4706-b679-dd3459cfa3ea" />
-<img width="1892" height="905" alt="image" src="https://github.com/user-attachments/assets/5b323d78-6494-4c32-a178-e1c81464fffe" />
-<img width="1899" height="908" alt="image" src="https://github.com/user-attachments/assets/51408da6-37a6-4261-b074-c2e036308af8" />
-<img width="1900" height="911" alt="image" src="https://github.com/user-attachments/assets/063d650a-40f2-473c-b06e-011bec9bf553" />
-<img width="1896" height="908" alt="image" src="https://github.com/user-attachments/assets/5345dff0-c731-419e-bdda-f4eb116484b1" />
+The screenshots below were already attached to the repository's README; they are kept here.
 
+![Project screenshot 1](https://github.com/user-attachments/assets/3a15440c-c668-4616-8876-0c1275699201)
 
+![Project screenshot 2](https://github.com/user-attachments/assets/eeb6a9f5-52dc-4706-b679-dd3459cfa3ea)
+
+![Project screenshot 3](https://github.com/user-attachments/assets/5b323d78-6494-4c32-a178-e1c81464fffe)
+
+![Project screenshot 4](https://github.com/user-attachments/assets/51408da6-37a6-4261-b074-c2e036308af8)
+
+![Project screenshot 5](https://github.com/user-attachments/assets/063d650a-40f2-473c-b06e-011bec9bf553)
+
+![Project screenshot 6](https://github.com/user-attachments/assets/5345dff0-c731-419e-bdda-f4eb116484b1)
