@@ -178,8 +178,23 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       return;
     }
     if (message.type === "setMonitoring") {
-      await chrome.storage.local.set({ monitoringEnabled: Boolean(message.enabled) });
+      const enabled = Boolean(message.enabled);
+      if (!enabled) {
+        await finishActiveTab();
+        activeTabId = null;
+      }
+      await chrome.storage.local.set({ monitoringEnabled: enabled });
       await refreshMonitoringState();
+      if (enabled) {
+        const [activeTab] = await chrome.tabs.query({
+          active: true,
+          lastFocusedWindow: true
+        });
+        if (activeTab?.id !== undefined && activeTab.url) {
+          await recordNavigation(activeTab.id, activeTab.url, "monitoring_resumed");
+          await activateTab(activeTab.id);
+        }
+      }
       sendResponse({ ok: true });
       return;
     }

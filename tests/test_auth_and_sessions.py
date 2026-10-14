@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.models.auth import LocalSession
+from app.models.auth import AuthAuditEvent
 from app.models.auth import User
 from app.services.auth import pwd_context
 from app.time import utcnow
@@ -11,12 +12,16 @@ from tests.conftest import login
 
 
 def test_login_hashing_and_protected_route(client):
-    api, _ = client
+    api, db_factory = client
     assert api.get("/auth/me").status_code == 401
     assert api.post("/auth/login", json={"username": "alice", "password": "wrong"}).status_code == 401
     result = login(api)
     assert result.status_code == 200
     assert api.get("/auth/me").json()["username"] == "alice"
+    with db_factory() as db:
+        events = db.query(AuthAuditEvent).all()
+        assert any(event.success for event in events)
+        assert all("AlicePass123!" not in event.account_label for event in events)
 
 
 def test_password_hash_rejects_incorrect_password(client):
@@ -84,6 +89,10 @@ def test_dashboard_and_error_handling(client):
     assert "authentication" in dashboard.text.lower()
     assert "navigation event does not prove an Instagram login" in dashboard.text
     assert 'id="browser-activity-rows"' in dashboard.text
+    assert "<th>Username</th><th>Metadata</th><th>Source</th>" in dashboard.text
+    assert "<th>Device</th><th>Metadata</th>" in dashboard.text
+    assert "function activityMetadata(value)" in script
+    assert '["transition", "tab_id"]' in script
     assert 'api("/browser-activity/events?limit=100")' in script
     assert 'api("/browser-activity/events?domain=facebook.com&limit=100")' in script
     assert 'api("/browser-activity/events?domain=instagram.com&limit=100")' in script
@@ -99,6 +108,10 @@ def test_dashboard_and_error_handling(client):
     assert "extension bearer" not in script.lower()
     assert "external_account_id" in script
     assert api.post("/auth/login", json={"username": "", "password": ""}).status_code == 422
+    auth_bootstrap = script.split('api("/auth/me").then(user => {', 1)[1].split(
+        "}).catch(error => {", 1
+    )[0]
+    assert auth_bootstrap.index("currentUser = user;") < auth_bootstrap.index("load();")
 
 
 def test_local_demo_lifecycle_and_events(client):

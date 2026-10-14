@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.auth import LocalSession, SessionEvent, User
+from app.models.auth import AuthAuditEvent, LocalSession, SessionEvent, User
 from app.routers.auth import current_user
 from app.schemas.session import (
     SessionEventListResponse,
@@ -80,6 +80,15 @@ def revoke_session(session_id: int, user: User = Depends(current_user), db: Sess
     if not session.revoked_at:
         session.revoked_at = utcnow()
         db.add(SessionEvent(session_id=session.id, user_id=user.id, event_type="revoked"))
+        db.add(AuthAuditEvent(
+            user_id=user.id,
+            account_label=user.username,
+            event_type="dashboard_session_revoked",
+            success=True,
+            source="application",
+            confidence="confirmed",
+            is_demo=user.is_demo,
+        ))
         db.commit()
         db.refresh(session)
     return session

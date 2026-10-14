@@ -19,16 +19,63 @@ engine = create_engine(settings.database_url, connect_args=connect_args)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
-def initialize_database(database_engine=engine) -> None:
+def initialize_database(
+    database_engine=engine,
+    initial_admin_username: str | None = None,
+) -> None:
     """Create tables and apply additive migrations without replacing existing data."""
     Base.metadata.create_all(bind=database_engine)
     with database_engine.begin() as connection:
+        user_columns = {column["name"] for column in inspect(connection).get_columns("users")}
+        if "email" not in user_columns:
+            connection.execute(text("ALTER TABLE users ADD COLUMN email VARCHAR(254)"))
+        if "created_at" not in user_columns:
+            connection.execute(text("ALTER TABLE users ADD COLUMN created_at DATETIME"))
+        if "is_demo" not in user_columns:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN is_demo BOOLEAN NOT NULL DEFAULT 0")
+            )
+        if "role" not in user_columns:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'user'")
+            )
+        connection.execute(
+            text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_email ON users (email)")
+        )
+        connection.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_users_is_demo ON users (is_demo)")
+        )
+        connection.execute(text(
+            "UPDATE users SET is_demo = 1 WHERE username = 'demo-alice' AND is_demo = 0"
+        ))
         connection.execute(
             text(
                 "CREATE TABLE IF NOT EXISTS schema_migrations "
                 "(version VARCHAR(100) PRIMARY KEY)"
             )
         )
+        if initial_admin_username:
+            migration_versions = {
+                row[0] for row in connection.execute(text("SELECT version FROM schema_migrations"))
+            }
+            if "initial_admin_bootstrap_v1" not in migration_versions:
+                result = connection.execute(
+                    text(
+                        "UPDATE users SET role = 'admin' "
+                        "WHERE lower(username) = lower(:username) AND is_active = 1"
+                    ),
+                    {"username": initial_admin_username.strip()},
+                )
+                if result.rowcount != 1:
+                    raise RuntimeError(
+                        "INITIAL_ADMIN_USERNAME must match exactly one active existing account"
+                    )
+                connection.execute(
+                    text(
+                        "INSERT INTO schema_migrations (version) "
+                        "VALUES ('initial_admin_bootstrap_v1')"
+                    )
+                )
         columns = {column["name"] for column in inspect(connection).get_columns("provider_connections")}
         additions = {
             "connection_mode": "VARCHAR(20) NOT NULL DEFAULT 'mock'",
@@ -37,10 +84,23 @@ def initialize_database(database_engine=engine) -> None:
             "last_checked_at": "DATETIME",
             "authorization_expires_at": "DATETIME",
             "error_code": "VARCHAR(80)",
+            "scopes": "JSON NOT NULL DEFAULT '[]'",
+            "consent_recorded_at": "DATETIME",
+            "updated_at": "DATETIME",
         }
         for name, definition in additions.items():
             if name not in columns:
                 connection.execute(text(f"ALTER TABLE provider_connections ADD COLUMN {name} {definition}"))
+        connection.execute(
+            text("UPDATE provider_connections SET updated_at = created_at WHERE updated_at IS NULL")
+        )
+
+        post_metric_columns = {
+            column["name"] for column in inspect(connection).get_columns("post_metrics")
+        }
+        for name in ("shares", "saves"):
+            if name not in post_metric_columns:
+                connection.execute(text(f"ALTER TABLE post_metrics ADD COLUMN {name} INTEGER"))
 
         if "provider_connection_state_v1" not in {
             row[0] for row in connection.execute(text("SELECT version FROM schema_migrations"))
@@ -131,6 +191,35 @@ def initialize_database(database_engine=engine) -> None:
             )
             connection.execute(
                 text("INSERT INTO schema_migrations (version) VALUES ('session_inventory_v1')")
+            )
+        participant_columns = {
+            column["name"] for column in inspect(connection).get_columns("social_participants")
+        }
+        participant_additions = {
+            "consent_token_hash": "VARCHAR(64)",
+            "consent_expires_at": "DATETIME",
+            "consent_confirmed_at": "DATETIME",
+            "is_demo": "BOOLEAN NOT NULL DEFAULT 0",
+        }
+        for name, definition in participant_additions.items():
+            if name not in participant_columns:
+                connection.execute(text(
+                    f"ALTER TABLE social_participants ADD COLUMN {name} {definition}"
+                ))
+        if "social_participants_consent_v1" not in {
+            row[0] for row in connection.execute(text("SELECT version FROM schema_migrations"))
+        }:
+            connection.execute(
+                text(
+                    "INSERT INTO schema_migrations (version) "
+                    "VALUES ('social_participants_consent_v1')"
+                )
+            )
+        if "social_demo_data_v1" not in {
+            row[0] for row in connection.execute(text("SELECT version FROM schema_migrations"))
+        }:
+            connection.execute(
+                text("INSERT INTO schema_migrations (version) VALUES ('social_demo_data_v1')")
             )
 
 

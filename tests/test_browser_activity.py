@@ -22,22 +22,35 @@ from tests.conftest import login
 
 def test_extension_pairing_cors_preflight(client):
     api, _ = client
+    extension_origin = "chrome-extension://abpecjecneifkjappocjphhfmehjlfcd"
     response = api.options(
         "/browser-extension/pairing/exchange",
         headers={
-            "Origin": "chrome-extension://bcndehhdcfcohhigpcbamkpipbgdopla",
+            "Origin": extension_origin,
             "Access-Control-Request-Method": "POST",
             "Access-Control-Request-Headers": "content-type, authorization",
         },
     )
     assert response.status_code == 200
-    assert response.headers["access-control-allow-origin"] == (
-        "chrome-extension://bcndehhdcfcohhigpcbamkpipbgdopla"
-    )
+    assert response.headers["access-control-allow-origin"] == extension_origin
     assert "POST" in response.headers["access-control-allow-methods"]
     assert "content-type" in response.headers["access-control-allow-headers"].lower()
     assert "authorization" in response.headers["access-control-allow-headers"].lower()
     assert "access-control-allow-credentials" not in response.headers
+
+
+def test_extension_pairing_cors_rejects_web_origins(client):
+    api, _ = client
+    response = api.options(
+        "/browser-extension/pairing/exchange",
+        headers={
+            "Origin": "https://attacker.example",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type, authorization",
+        },
+    )
+    assert response.status_code == 400
+    assert "access-control-allow-origin" not in response.headers
 
 
 def test_browser_activity_migration_is_additive_and_rerunnable(tmp_path):
@@ -128,13 +141,29 @@ def test_browser_activity_schema_rejects_oversized_metadata():
         )
 
 
-def test_browser_activity_schema_rejects_sensitive_metadata():
+@pytest.mark.parametrize(
+    "field",
+    [
+        "access_token",
+        "authorization",
+        "body",
+        "cookie",
+        "cookies",
+        "content",
+        "password",
+        "password_hash",
+        "request_headers",
+        "session_token",
+        "PaSsWoRd",
+    ],
+)
+def test_browser_activity_schema_rejects_sensitive_metadata(field):
     with pytest.raises(ValidationError):
         BrowserActivityEventCreate(
             event_type="navigation",
             occurred_at="2026-01-01T00:00:00Z",
             domain="instagram.com",
-            metadata={"cookies": "not allowed"},
+            metadata={field: "not allowed"},
             consent_version="v1",
         )
 
@@ -271,6 +300,37 @@ def test_pairing_code_expiry_and_device_revocation_are_enforced(client):
     ).status_code == 401
 
 
+def test_extension_device_revocation_is_scoped_to_owning_user(client):
+    api, _ = client
+    login(api)
+    code = api.post("/browser-extension/pairing/start").json()["pairing_code"]
+    token = api.post(
+        "/browser-extension/pairing/exchange",
+        json={"pairing_code": code, "installation_label": "Alice's browser"},
+    ).json()["extension_token"]
+    device_id = api.get("/browser-extension/devices").json()[0]["id"]
+
+    other_user = TestClient(app)
+    login(other_user, "bob", "BobPass123!")
+    assert other_user.get("/browser-extension/devices").json() == []
+    assert other_user.post(
+        f"/browser-extension/devices/{device_id}/revoke"
+    ).status_code == 404
+
+    accepted = api.post(
+        "/browser-activity/events",
+        headers={"Authorization": "Bearer " + token},
+        json={
+            "event_type": "navigation",
+            "occurred_at": datetime.now(UTC).isoformat(),
+            "domain": "facebook.com",
+            "consent_version": "v1",
+            "idempotency_key": "still-owned",
+        },
+    )
+    assert accepted.status_code == 200
+
+
 def test_activity_post_requires_extension_token_and_gets_are_dashboard_owned(client):
     api, _ = client
     assert api.post(
@@ -303,7 +363,7 @@ def test_activity_events_deduplicate_and_return_stats(client):
         "occurred_at": "2026-01-01T00:00:00Z",
         "domain": "Instagram.com.",
         "duration_seconds": 4.5,
-        "metadata": {"tab_id": 4},
+        "metadata": {"tab_id": 4, "transition": "typed"},
         "consent_version": "v1",
         "idempotency_key": "event-1",
     }
@@ -312,7 +372,15 @@ def test_activity_events_deduplicate_and_return_stats(client):
     assert first.status_code == 200
     assert duplicate.status_code == 200
     assert duplicate.json()["id"] == first.json()["id"]
-    assert duplicate.json()["metadata"] == {"tab_id": 4}
+    assert duplicate.json()["metadata"] == {"tab_id": 4, "transition": "typed"}
+
+    activity = api.get("/login-activity/events?event_type=navigation_observed").json()
+    browser_event = activity["items"][0]
+    assert browser_event["account_label"] == "alice"
+    assert browser_event["status"] == "observed"
+    assert browser_event["confidence"] == "unknown"
+    assert browser_event["metadata"] == {"tab_id": 4, "transition": "typed"}
+    assert browser_event["platform"] == "Instagram"
 
     stats = api.get("/browser-activity/stats").json()
     assert stats == {

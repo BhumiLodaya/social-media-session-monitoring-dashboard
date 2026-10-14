@@ -1,70 +1,290 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Session Dashboard</title><link rel="stylesheet" href="/static/dashboard.css?v=dashboard-ui-2">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Session Dashboard</title>
+  <link rel="stylesheet" href="/static/dashboard.css?v=dashboard-ui-5">
 </head>
 <body>
-<main>
-  <header class="site-header"><div><p class="eyebrow">SOCIAL MEDIA MONITORING</p><h1>Session Dashboard</h1></div><nav aria-label="Primary navigation"><a href="/demo">Open local demo</a> <button id="logout" type="button">Log out</button></nav></header>
-  <p class="demo notice">Local synthetic demo data only. No third-party cookies or tokens are collected.</p>
-  <section id="login" class="auth-panel"><p class="eyebrow">SECURE ACCESS</p><h2>Sign in</h2><p class="muted">Review consented activity and monitoring metadata for your account.</p><p id="startup-error" class="error" role="alert"></p><form id="login-form">
-    <label>Username<input name="username" autocomplete="username" placeholder="Username" required></label><label>Password<input name="password" type="password" autocomplete="current-password" placeholder="Password" required></label>
-    <button type="submit">Sign in</button><p id="login-error" class="error" role="alert"></p>
-  </form></section>
-  <section id="dashboard" hidden>
-    <section class="overview"><div class="section-heading"><div><p class="eyebrow">OVERVIEW</p><h2>Session activity</h2></div><button id="refresh" type="button" class="button-secondary">Refresh data</button></div><div class="cards metric-grid"><div><span>Total sessions</span><b id="total">0</b></div><div><span>Active</span><b id="active" class="active">0</b></div><div><span>Expired</span><b id="expired" class="expired">0</b></div><div><span>Revoked</span><b id="revoked" class="revoked">0</b></div></div></section>
-    <section class="panel"><div class="toolbar"><label>Status<select id="status"><option value="">All statuses</option><option>active</option><option>expired</option><option>revoked</option></select></label><label>Event type<select id="event-type"><option value="">All session events</option><option>created</option><option>revoked</option><option>expired</option></select></label></div>
-    <p id="message"></p><table><thead><tr><th>ID</th><th>Status</th><th>Created</th><th>Last activity</th><th>Expiry</th><th></th></tr></thead><tbody id="rows"></tbody></table>
+<main class="app-shell">
+  <aside class="sidebar" aria-label="Dashboard navigation">
+    <div class="sidebar-brand">
+      <p class="eyebrow">SOCIAL MEDIA MONITORING</p>
+      <h1>Session Dashboard</h1>
+    </div>
+    <nav id="sidebar-nav" class="sidebar-nav">
+      <a href="/" data-nav="overview">Overview</a>
+      <a href="/user-directory" data-nav="users">Users</a>
+      <a href="/login-activity" data-nav="login-activity">Login Activity</a>
+      <a href="/dashboard-sessions" data-nav="sessions">Sessions</a>
+      <a href="/monitoring" data-nav="monitoring">Monitoring</a>
+      <a href="/panels" data-nav="panels">Panel Usage</a>
+      <a href="/connected-accounts" data-nav="connected-accounts">Connected Accounts</a>
+      <a href="/organic-ids" data-nav="organic-ids">Organic IDs</a>
+      <a href="/diagnosis" data-nav="diagnosis">Post Reach Diagnosis</a>
+      <a href="/demo" class="sidebar-demo">Local demo</a>
+    </nav>
+    <div class="sidebar-footer">
+      <p id="current-user" class="muted"></p>
+      <button id="logout" type="button" class="button-secondary">Sign out</button>
+    </div>
+  </aside>
+
+  <div class="content-area">
+    <button id="sidebar-toggle" type="button" class="button-secondary" aria-expanded="false" aria-controls="sidebar-nav">Menu</button>
+    <p class="demo notice">Local synthetic demo data only. No third-party cookies or tokens are collected.</p>
+
+    <section id="login" class="auth-panel">
+      <p class="eyebrow">SECURE ACCESS</p>
+      <h2 id="auth-title">Sign in</h2>
+      <p class="muted">Review consented activity and monitoring metadata for your account.</p>
+      <p id="startup-error" class="error" role="alert"></p>
+      <form id="login-form" hidden>
+        <label>Username<input name="username" autocomplete="username" placeholder="Username" required></label>
+        <label>Password<input name="password" type="password" autocomplete="current-password" placeholder="Password" required></label>
+        <button type="submit">Sign in</button>
+        <p id="login-error" class="error" role="alert"></p>
+        <p id="registration-success" class="success" role="status"></p>
+        <p>New here? <a href="/register">Create an account</a></p>
+      </form>
+      <form id="registration-form" hidden>
+        <label>Username<input name="username" autocomplete="username" minlength="3" maxlength="32" pattern="[\w.\x2d]+" required></label>
+        <label>Email<input name="email" type="email" autocomplete="email" maxlength="254" required></label>
+        <label>Password<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label>
+        <p class="muted">Use at least 12 characters. This account is for this dashboard only.</p>
+        <button type="submit">Create account</button>
+        <p id="registration-error" class="error" role="alert"></p>
+        <p>Already registered? <a href="/login">Sign in</a></p>
+      </form>
     </section>
-    <section class="panel" id="session-inventory-panel">
-      <h2>Session inventory</h2>
-      <p class="muted">Inventory records are separate from dashboard login sessions. “Authentication unverified” means this application has not confirmed a platform login; a running browser process is not proof of authentication.</p>
-      <div class="cards"><div>Recorded sessions <b id="inventory-total">0</b></div><div>Active <b id="inventory-active">0</b></div><div>Unknown <b id="inventory-unknown">0</b></div><div>Revoked <b id="inventory-revoked">0</b></div></div>
-      <p id="session-inventory-status" class="muted" role="status">Loading session inventory...</p>
-      <table><thead><tr><th>ID</th><th>User</th><th>Platform</th><th>Type</th><th>Status</th><th>Authentication</th><th>Created</th><th>Last activity</th><th>Expiry</th><th>Last check</th><th>Status reason</th><th></th></tr></thead><tbody id="session-inventory-rows"></tbody></table>
+
+    <section id="dashboard" hidden>
+      <section class="view" data-view="overview">
+        <div class="section-heading">
+          <div><p class="eyebrow">OVERVIEW</p><h2>Activity summary</h2></div>
+          <button id="refresh" type="button" class="button-secondary">Refresh data</button>
+        </div>
+        <div class="cards metric-grid">
+          <div><span>Total sessions</span><b id="total">0</b></div>
+          <div><span>Active</span><b id="active" class="active">0</b></div>
+          <div><span>Expired</span><b id="expired" class="expired">0</b></div>
+          <div><span>Revoked</span><b id="revoked" class="revoked">0</b></div>
+        </div>
+        <section class="panel">
+          <h2>Recent activity timeline</h2>
+          <p class="muted">Dashboard logins, logouts, session changes, and panels you opened in this app.</p>
+          <p id="activity-timeline-status" class="muted" role="status">Loading activity...</p>
+          <ul id="activity-timeline"></ul>
+        </section>
+        <section class="panel status-panel" id="social-browser-status-panel">
+          <div class="section-heading">
+            <div><p class="eyebrow">CONSENTED ACTIVITY</p><h2>Facebook and Instagram status</h2></div>
+            <span class="status-legend">Monitoring metadata only</span>
+          </div>
+          <p class="muted">This status reflects recent consented browser activity only. It does not indicate whether an account is authenticated.</p>
+          <p id="social-browser-status-message" class="muted" role="status">Loading Facebook and Instagram status...</p>
+          <table>
+            <thead><tr><th>Platform</th><th>Browser activity status</th><th>Last activity</th><th>Explanation</th></tr></thead>
+            <tbody id="social-browser-status-rows"></tbody>
+          </table>
+        </section>
+      </section>
+
+      <section class="view" data-view="users" hidden>
+        <div class="section-heading"><div><p class="eyebrow">ACCOUNT</p><h2 id="users-title">Your account</h2></div></div>
+        <section class="panel">
+          <p id="users-description" class="muted">Your account details. Account status and current session status are shown separately.</p>
+          <label id="user-search-label">Search<input id="user-search" type="search" placeholder="Filter by username or email" autocomplete="off"></label>
+          <p id="users-status" class="muted" role="status">Loading users...</p>
+          <table><thead><tr><th>Username</th><th>Email</th><th>Role</th><th>Created</th><th>Last login</th><th>Last logout</th><th>Account status</th><th>Session status</th><th></th></tr></thead>
+            <tbody id="users-rows"></tbody>
+          </table>
+          <div class="pagination">
+            <button id="users-previous" type="button" class="button-secondary">Previous</button>
+            <span id="users-page-status" class="muted" aria-live="polite"></span>
+            <button id="users-next" type="button" class="button-secondary">Next</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="view" data-view="user-detail" hidden>
+        <div class="section-heading">
+          <div><p class="eyebrow">USER</p><h2 id="user-detail-title">User details</h2></div>
+          <a href="/user-directory" data-nav="users" class="button-secondary nav-back">Back to users</a>
+        </div>
+        <section class="panel">
+          <p id="user-detail-status" class="muted" role="status">Loading user...</p>
+          <button id="user-account-toggle" type="button" class="button-secondary" hidden></button>
+          <dl class="detail-grid" id="user-detail-fields"></dl>
+          <h3>Account activity</h3>
+          <p id="user-activity-status" class="muted" role="status"></p>
+          <table><thead><tr><th>Timestamp</th><th>Event</th><th>Source</th><th>Status</th></tr></thead><tbody id="user-activity-rows"></tbody></table>
+        </section>
+      </section>
+
+      <section class="view" data-view="login-activity" hidden>
+        <section class="panel" id="login-activity-panel">
+          <h2>Login Activity</h2>
+          <p class="muted">Confirmed dashboard authentication events are separate from observed browser activity. Browser observations never prove that a social account is signed in.</p>
+          <div class="cards login-summary">
+            <div><span>Observed events</span><b id="login-observed">0</b></div>
+            <div><span>Dashboard logins</span><b id="login-successful">0</b></div>
+            <div><span>Failed logins</span><b id="login-failed">0</b></div>
+            <div><span>Connected accounts</span><b id="login-connected">0</b></div>
+            <div><span>Reconnect required</span><b id="login-reconnect">0</b></div>
+          </div>
+          <div class="toolbar login-filters">
+            <label>Platform<select id="login-platform"><option value="">All platforms</option></select></label>
+            <label>Event type<select id="login-event-type"><option value="">All event types</option></select></label>
+            <label>Status<select id="login-status"><option value="">All statuses</option><option value="confirmed">Confirmed</option><option value="observed">Observed</option><option value="unknown">Unknown</option></select></label>
+          </div>
+          <p id="login-activity-status" class="muted" role="status">Loading login activity...</p>
+          <table><thead><tr><th>Timestamp</th><th>Account</th><th>Platform</th><th>Event</th><th>Source</th><th>Status / confidence</th><th>Device</th><th>Metadata</th></tr></thead><tbody id="login-activity-rows"></tbody></table>
+        </section>
+      </section>
+
+      <section class="view" data-view="sessions" hidden>
+        <section class="overview" id="overview-panel">
+          <div class="section-heading"><div><p class="eyebrow">SESSIONS</p><h2>Dashboard sessions</h2></div></div>
+          <section class="panel">
+            <div class="toolbar">
+              <label>Status<select id="status"><option value="">All statuses</option><option>active</option><option>expired</option><option>revoked</option></select></label>
+              <label>Event type<select id="event-type"><option value="">All session events</option><option>created</option><option>revoked</option><option>expired</option></select></label>
+            </div>
+            <p id="message"></p>
+            <table><thead><tr><th>ID</th><th>Status</th><th>Created</th><th>Last activity</th><th>Expiry</th><th></th></tr></thead><tbody id="rows"></tbody></table>
+          </section>
+          <h2>Recent session events</h2>
+          <ul id="events"></ul>
+        </section>
+        <section class="panel" id="session-inventory-panel">
+          <h2>Session inventory</h2>
+          <p class="muted">Inventory records are separate from dashboard login sessions. “Authentication unverified” means this application has not confirmed a platform login; a running browser process is not proof of authentication.</p>
+          <div class="cards">
+            <div>Recorded sessions <b id="inventory-total">0</b></div>
+            <div>Active <b id="inventory-active">0</b></div>
+            <div>Unknown <b id="inventory-unknown">0</b></div>
+            <div>Revoked <b id="inventory-revoked">0</b></div>
+          </div>
+          <p id="session-inventory-status" class="muted" role="status">Loading session inventory...</p>
+          <table><thead><tr><th>ID</th><th>User</th><th>Platform</th><th>Type</th><th>Status</th><th>Authentication</th><th>Created</th><th>Last activity</th><th>Expiry</th><th>Last check</th><th>Status reason</th><th></th></tr></thead><tbody id="session-inventory-rows"></tbody></table>
+        </section>
+      </section>
+
+      <section class="view" data-view="panels" hidden>
+        <section class="panel">
+          <h2>Panel usage</h2>
+          <p class="muted">Recorded when you open a dashboard section while signed in. This is separate from session cookies alone.</p>
+          <p id="panel-usage-status" class="muted" role="status">Loading panel usage...</p>
+          <table>
+            <thead><tr><th>Timestamp</th><th>Panel</th><th>User</th></tr></thead>
+            <tbody id="panel-usage-rows"></tbody>
+          </table>
+        </section>
+      </section>
+
+      <section class="view" data-view="connected-accounts" hidden>
+        <section class="panel" id="social-accounts-panel">
+          <div class="demo-actions">
+            <div><p class="eyebrow">DEMO WALKTHROUGH</p><h2>Start Demo</h2><p class="muted">Creates one clearly labelled synthetic Meta connection, three pending synthetic participant invitations, and synthetic post metrics. No live Meta data is retrieved.</p></div>
+            <button id="start-demo" type="button">Start Demo</button>
+            <button id="reset-demo" type="button" class="button-danger">Reset Demo Data</button>
+          </div>
+          <h2>Connected social accounts</h2>
+          <p class="muted">Official Meta authorization is separate from this dashboard login. Demo mode creates synthetic records only; browser activity never proves account authentication.</p>
+          <p id="social-accounts-status" class="muted" role="status">Loading connected accounts...</p>
+          <button id="start-meta-oauth" type="button">Connect Meta account</button>
+          <button id="create-demo-analytics" type="button" class="button-secondary">Load synthetic analytics</button>
+          <ul id="social-connections"></ul>
+          <p id="demo-progress" class="muted" role="status"></p>
+        </section>
+        <section class="panel"><h2>Authorized connections</h2><ul id="connections"></ul><h2>Cookie consent</h2><ul id="consent"></ul></section>
+      </section>
+
+      <section class="view" data-view="organic-ids" hidden>
+        <section class="panel" id="participants-panel">
+          <h2>Participating accounts (organic IDs)</h2>
+          <p class="muted">Only legitimate, consenting participants are represented. No engagement actions are automated.</p>
+          <p id="participant-invitation-status" class="muted" role="status"></p>
+          <ul id="participants"></ul>
+        </section>
+      </section>
+
+      <section class="view" data-view="diagnosis" hidden>
+        <section class="panel" id="diagnosis-panel">
+          <h2>Post reach diagnosis</h2>
+          <p class="muted">Compares the latest post reach to a historical median from comparable posts on the same account.</p>
+          <p id="diagnosis-status" class="muted" role="status">Connect an account or load synthetic analytics.</p>
+          <div id="diagnosis-summary" class="diagnosis-summary" hidden>
+            <div class="cards diagnosis-metrics">
+              <div><span>Diagnosis status</span><b id="diagnosis-result-status">—</b></div>
+              <div><span>Reach (latest post)</span><b id="diagnosis-reach">—</b></div>
+              <div><span>Impressions</span><b id="diagnosis-impressions">—</b></div>
+              <div><span>Engagement rate</span><b id="diagnosis-engagement">—</b></div>
+              <div><span>Baseline median reach</span><b id="diagnosis-baseline-reach">—</b></div>
+              <div><span>Reach difference</span><b id="diagnosis-reach-diff">—</b></div>
+              <div><span>Percentage difference</span><b id="diagnosis-pct-diff">—</b></div>
+              <div><span>Comparable posts</span><b id="diagnosis-comparable">—</b></div>
+            </div>
+            <p id="diagnosis-baseline" class="muted" role="status"></p>
+            <canvas id="diagnosis-chart" width="640" height="220" aria-label="Reach comparison chart"></canvas>
+          </div>
+          <p id="diagnosis-findings"></p>
+          <ul id="diagnosis-recommendations"></ul>
+          <table>
+            <thead><tr><th>Post</th><th>Likes</th><th>Comments</th><th>Shares</th><th>Saves</th><th>Reach</th><th>Impressions</th><th>Engagement rate</th><th>Source</th></tr></thead>
+            <tbody id="diagnosis-rows"></tbody>
+          </table>
+        </section>
+      </section>
+
+      <section class="view" data-view="monitoring" hidden>
+        <section class="panel" id="browser-activity-panel">
+          <h2>Browser Activity</h2>
+          <p class="muted">Consent-based browser extension metadata only. Full URLs, page contents, cookies, and tokens are not displayed. The metadata column shows only the supported transition and tab identifier fields.</p>
+          <p id="browser-activity-status" class="muted" role="status">Loading browser activity...</p>
+          <table>
+            <thead><tr><th>Domain</th><th>Event type</th><th>Timestamp</th><th>Duration</th><th>Username</th><th>Metadata</th><th>Source</th></tr></thead>
+            <tbody id="browser-activity-rows"></tbody>
+          </table>
+        </section>
+        <section class="panel" id="social-browser-activity-panel">
+          <h2>Recent Facebook/Instagram Browser Activity</h2>
+          <p class="muted">Observed browser activity does not prove that a Facebook or Instagram account is authenticated. Third-party website login/logout events are not recorded unless a trusted provider integration can verify them; navigation is never treated as a login.</p>
+          <p id="social-browser-activity-status" class="muted" role="status">Loading Facebook and Instagram activity...</p>
+          <table>
+            <thead><tr><th>Domain</th><th>Event type</th><th>Timestamp</th><th>Duration</th><th>Username</th><th>Metadata</th><th>Consent version</th></tr></thead>
+            <tbody id="social-browser-activity-rows"></tbody>
+          </table>
+        </section>
+        <section class="panel" id="browser-extension-monitoring-panel">
+          <h2>Browser Extension Monitoring</h2>
+          <p class="muted">Pairing and browser activity are separate from official Instagram account authorization. A navigation event does not prove an Instagram login or identify an account.</p>
+          <p id="browser-extension-status" class="muted" role="status">Loading browser extension status...</p>
+          <p id="browser-extension-message" role="status"></p>
+          <table>
+            <thead><tr><th>Installation</th><th>Status</th><th>Last seen</th><th>Expires</th><th></th></tr></thead>
+            <tbody id="browser-extension-rows"></tbody>
+          </table>
+          <p id="browser-extension-consent" class="muted"></p>
+        </section>
+        <section class="panel" id="network-panel">
+          <h2>Network observations</h2>
+          <p class="muted">Encrypted traffic is metadata only; it is not a confirmed application event.</p>
+          <div class="toolbar">
+            <select id="network-protocol"><option value="">All protocols</option></select>
+            <select id="network-source"><option value="">All sources</option><option>imported</option><option>live-captured</option></select>
+          </div>
+          <div class="cards"><div>Observations <b id="observation-total">0</b></div><div>Protocols <b id="protocol-total">0</b></div></div>
+          <ul id="protocols"></ul>
+          <p id="observation-status" class="muted"></p>
+          <table><thead><tr><th>UTC time</th><th>Protocol</th><th>Source</th><th>Destination</th><th>Packets/bytes</th></tr></thead><tbody id="observation-rows"></tbody></table>
+        </section>
+      </section>
     </section>
-    <h2>Recent events</h2><ul id="events"></ul>
-    <section class="panel" id="browser-activity-panel">
-      <h2>Browser Activity</h2>
-      <p class="muted">Consent-based browser extension metadata only. Full URLs, page contents, cookies, and tokens are not displayed.</p>
-      <p id="browser-activity-status" class="muted" role="status">Loading browser activity...</p>
-      <table>
-        <thead><tr><th>Domain</th><th>Event type</th><th>Timestamp</th><th>Duration</th><th>Source</th></tr></thead>
-        <tbody id="browser-activity-rows"></tbody>
-      </table>
-    </section>
-    <section class="panel" id="social-browser-activity-panel">
-      <h2>Recent Facebook/Instagram Browser Activity</h2>
-      <p class="muted">Observed browser activity does not prove that a Facebook or Instagram account is authenticated.</p>
-      <p id="social-browser-activity-status" class="muted" role="status">Loading Facebook and Instagram activity...</p>
-      <table>
-        <thead><tr><th>Domain</th><th>Event type</th><th>Timestamp</th><th>Duration</th><th>Consent version</th></tr></thead>
-        <tbody id="social-browser-activity-rows"></tbody>
-      </table>
-    </section>
-    <section class="panel status-panel" id="social-browser-status-panel">
-      <div class="section-heading"><div><p class="eyebrow">CONSENTED ACTIVITY</p><h2>Facebook and Instagram status</h2></div><span class="status-legend">Monitoring metadata only</span></div>
-      <p class="muted">This status reflects recent consented browser activity only. It does not indicate whether an account is authenticated.</p>
-      <p id="social-browser-status-message" class="muted" role="status">Loading Facebook and Instagram status...</p>
-      <table>
-        <thead><tr><th>Platform</th><th>Browser activity status</th><th>Last activity</th><th>Explanation</th></tr></thead>
-        <tbody id="social-browser-status-rows"></tbody>
-      </table>
-    </section>
-    <section class="panel" id="browser-extension-monitoring-panel">
-      <h2>Browser Extension Monitoring</h2>
-      <p class="muted">Pairing and browser activity are separate from official Instagram account authorization. A navigation event does not prove an Instagram login or identify an account.</p>
-      <p id="browser-extension-status" class="muted" role="status">Loading browser extension status...</p>
-      <p id="browser-extension-message" role="status"></p>
-      <table>
-        <thead><tr><th>Installation</th><th>Status</th><th>Last seen</th><th>Expires</th><th></th></tr></thead>
-        <tbody id="browser-extension-rows"></tbody>
-      </table>
-      <p id="browser-extension-consent" class="muted"></p>
-    </section>
-    <section class="panel"><h2>Network observations</h2><p class="muted">Encrypted traffic is metadata only; it is not a confirmed application event.</p><div class="toolbar"><select id="network-protocol"><option value="">All protocols</option></select><select id="network-source"><option value="">All sources</option><option>imported</option><option>live-captured</option></select></div><div class="cards"><div>Observations <b id="observation-total">0</b></div><div>Protocols <b id="protocol-total">0</b></div></div><ul id="protocols"></ul><p id="observation-status" class="muted"></p><table><thead><tr><th>UTC time</th><th>Protocol</th><th>Source</th><th>Destination</th><th>Packets/bytes</th></tr></thead><tbody id="observation-rows"></tbody></table></section>
-    <section class="panel"><h2>Authorized connections</h2><ul id="connections"></ul><h2>Cookie consent</h2><ul id="consent"></ul></section>
-  </section>
-</main><script src="/static/dashboard.js?v=browser-activity-1"></script>
-</body></html>
+  </div>
+</main>
+<script src="/static/dashboard.js?v=dashboard-ui-6"></script>
+</body>
+</html>

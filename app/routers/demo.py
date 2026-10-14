@@ -26,8 +26,15 @@ class DemoSessionRequest(BaseModel):
 def demo_user(db: Session) -> User:
     user = db.scalar(select(User).where(User.username == DEMO_USERNAME))
     if user:
+        if not user.is_demo:
+            user.is_demo = True
+            db.commit()
         return user
-    user = User(username=DEMO_USERNAME, password_hash=pwd_context.hash(DEMO_PASSWORD))
+    user = User(
+        username=DEMO_USERNAME,
+        password_hash=pwd_context.hash(DEMO_PASSWORD),
+        is_demo=True,
+    )
     db.add(user)
     db.commit()
     db.refresh(user)
