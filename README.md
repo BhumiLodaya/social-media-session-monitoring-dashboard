@@ -118,18 +118,4 @@ docker compose up --build
 
 Docker Compose stores the SQLite database in the named `app-data` volume. Stop the application with `Ctrl+C`; `docker compose down` stops and removes the container, not the named data volume.
 
-## Screenshots
 
-The screenshots below were already attached to the repository's README; they are kept here.
-
-![Project screenshot 1](https://github.com/user-attachments/assets/3a15440c-c668-4616-8876-0c1275699201)
-
-![Project screenshot 2](https://github.com/user-attachments/assets/eeb6a9f5-52dc-4706-b679-dd3459cfa3ea)
-
-![Project screenshot 3](https://github.com/user-attachments/assets/5b323d78-6494-4c32-a178-e1c81464fffe)
-
-![Project screenshot 4](https://github.com/user-attachments/assets/51408da6-37a6-4261-b074-c2e036308af8)
-
-![Project screenshot 5](https://github.com/user-attachments/assets/063d650a-40f2-473c-b06e-011bec9bf553)
-
-![Project screenshot 6](https://github.com/user-attachments/assets/5345dff0-c731-419e-bdda-f4eb116484b1)
